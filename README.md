@@ -1,4 +1,3 @@
-# 🤖 AI Business Intelligence Platform
 
 > An AI-powered Business Intelligence Platform that combines **Machine Learning, SQL Analytics, Retrieval-Augmented Generation (RAG), and Large Language Models** to help businesses analyze data, generate predictions, and interact with their information using natural language.
 
