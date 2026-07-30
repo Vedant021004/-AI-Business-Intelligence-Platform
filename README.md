@@ -1,72 +1,254 @@
+# 🧠 AI Data Analyst Copilot
 
-> An AI-powered Business Intelligence Platform that combines **Machine Learning, SQL Analytics, Retrieval-Augmented Generation (RAG), and Large Language Models** to help businesses analyze data, generate predictions, and interact with their information using natural language.
-
----
-
-## 📌 Overview
-
-Traditional business analytics requires switching between spreadsheets, SQL queries, dashboards, and reports.
-
-This project brings everything together into a single AI-powered platform.
-
-Users can upload:
-
-- 📄 PDF Reports
-- 📊 CSV / Excel Files
-- 📁 Business Documents
-
-The platform automatically processes the uploaded files, stores structured data in a SQL database, indexes documents using embeddings, trains Machine Learning models, and allows users to ask questions in natural language.
+> An Agentic AI system that can understand documents, store structured and unstructured data intelligently, answer questions, perform analysis, generate predictions, and save AI-generated reports.
 
 ---
 
-## 🚀 Features
+# 📖 Project Overview
 
-### 📊 Business Dashboard
+Most RAG applications can only answer questions from a PDF.
 
-- Revenue Analysis
-- Profit Tracking
-- Sales Analytics
-- Customer Insights
-- Product Performance
-- Regional Performance
-- AI Forecast Charts
+Most SQL Agents can only query structured databases.
+
+This project combines both approaches into a single intelligent system.
+
+The application automatically determines how uploaded documents should be processed, stores the information in the appropriate database, and later routes user questions to the correct AI agent.
 
 ---
 
-### 🤖 AI Business Assistant
+# 🎯 Goals
 
-Ask questions like:
+The project aims to solve four major problems:
 
-```text
-Which region generated the highest revenue?
+- 📄 Understand uploaded documents
+- 🗄 Store structured information inside MySQL
+- 🧠 Store semantic knowledge inside ChromaDB
+- 🤖 Use multiple AI agents to answer different types of questions
 
-Predict next month's sales.
+Instead of relying on one large AI model, the project follows an **Agentic AI Architecture**, where each agent has one specific responsibility.
 
-Compare Q2 with Q1.
+---
 
-Summarize the CEO report.
+# 🏗 Project Architecture
 
-Which products are underperforming?
+```
+                           User
+                             │
+                             ▼
+                         main.py
+                             │
+            ┌────────────────┴────────────────┐
+            ▼                                 ▼
+      Upload Document                   Ask Question
+            │                                 │
+            ▼                                 ▼
+   Upload Supervisor                  Chat Supervisor
+            │                                 │
+            ▼                                 ▼
+       PDF Parser                    Intent Classifier
+            │                                 │
+            ▼                                 ▼
+   Document Classifier              SQL / RAG / ML ?
+            │                                 │
+     ┌──────┼───────────┐          ┌──────────┼──────────┐
+     ▼      ▼           ▼          ▼          ▼          ▼
+Structured Mixed  Unstructured   SQL Agent RAG Agent ML Agent
+     │      │           │
+     ▼      ▼           ▼
+MySQL    MySQL +    ChromaDB
+          ChromaDB
 ```
 
-The AI automatically decides which tool should answer the question.
+---
+
+# 📂 Project Structure
+
+```
+AI_Data_Analyst/
+
+│
+├── agents/
+│   ├── sql_agent.py
+│   ├── rag_agent.py
+│   └── ml_agent.py
+│
+├── ingestion/
+│   ├── pdf_parser.py
+│   ├── classifier.py
+│   ├── sql_loader.py
+│   ├── rag_loader.py
+│   └── upload_supervisor.py
+│
+├── chat/
+│   ├── intent_classifier.py
+│   └── chat_supervisor.py
+│
+├── database/
+│   ├── mysql.py
+│   └── chroma.py
+│
+└── main.py
+```
 
 ---
 
-## 📂 File Upload Pipeline
+# 📌 Module Explanation
 
-### PDF Upload
+---
 
-```text
-PDF
+## main.py
+
+This is the entry point of the application.
+
+Every request starts here.
+
+The user can either:
+
+- Upload a document
+- Ask a question
+
+Depending on the action, the request is forwarded to the appropriate supervisor.
+
+---
+
+## Upload Supervisor
+
+The Upload Supervisor controls the complete document ingestion pipeline.
+
+It **does not process documents itself**.
+
+Instead, it decides which components should process the uploaded document.
+
+Workflow:
+
+```
+Upload PDF
 
 ↓
 
+PDF Parser
+
+↓
+
+Document Classifier
+
+↓
+
+SQL Loader
+or
+RAG Loader
+or
+Both
+```
+
+---
+
+## PDF Parser
+
+The parser is responsible only for reading the uploaded document.
+
+Responsibilities:
+
+- Read PDF
+- Extract text
+- Extract tables
+- Return extracted content
+
+It does **not** perform AI reasoning.
+
+It does **not** store data.
+
+It simply converts the PDF into machine-readable content.
+
+---
+
+## Document Classifier
+
+The Document Classifier is the first AI component in the system.
+
+Its job is to determine the nature of the uploaded document.
+
+Possible outputs:
+
+```
+Structured
+```
+
+```
+Unstructured
+```
+
+```
+Mixed
+```
+
+Example:
+
+| Document | Classification |
+|-----------|---------------|
+| Employee Table | Structured |
+| Company Policy | Unstructured |
+| Annual Report | Mixed |
+| Invoice | Structured |
+| Research Paper | Unstructured |
+
+The classifier also decides whether the document should be stored inside:
+
+- MySQL
+- ChromaDB
+- Both
+
+Example output:
+
+```json
+{
+  "document_type": "mixed",
+  "store_sql": true,
+  "store_rag": true,
+  "reason": "The document contains both tables and descriptive text."
+}
+```
+
+---
+
+## SQL Loader
+
+The SQL Loader is responsible for storing structured information.
+
+Example:
+
+```
+Employee Name
+Salary
+Department
+```
+
+↓
+
+Converted into a DataFrame
+
+↓
+
+Stored inside MySQL
+
+This module only writes data.
+
+It never answers user questions.
+
+---
+
+## RAG Loader
+
+The RAG Loader stores unstructured text.
+
+Workflow:
+
+```
 Extract Text
 
 ↓
 
-Chunk Documents
+Chunk Text
 
 ↓
 
@@ -74,11 +256,73 @@ Generate Embeddings
 
 ↓
 
-ChromaDB
+Store inside ChromaDB
+```
+
+Like the SQL Loader, this module only stores information.
+
+It does not perform retrieval.
+
+---
+
+# 🤖 AI Agents
+
+Once the document has been processed and stored, the AI agents become active.
+
+---
+
+## SQL Agent
+
+The SQL Agent interacts with MySQL.
+
+Example questions:
+
+```
+Show all employees.
+```
+
+```
+List the highest paid employee.
+```
+
+```
+Update salary of John.
+```
+
+Responsibilities:
+
+- Generate SQL
+- Execute SQL
+- Return results
+
+---
+
+## RAG Agent
+
+The RAG Agent answers questions from unstructured documents.
+
+Example:
+
+```
+Summarize the company policy.
+```
+
+```
+Explain section 5.
+```
+
+Workflow:
+
+```
+Question
 
 ↓
 
-Retriever
+Similarity Search
+
+↓
+
+Relevant Chunks
 
 ↓
 
@@ -89,373 +333,190 @@ LLM
 Answer
 ```
 
-Used for:
-
-- Sales Reports
-- Annual Reports
-- HR Policies
-- CEO Notes
-- Business Documents
-
 ---
 
-### CSV / Excel Upload
+## ML Agent
 
-```text
-CSV / Excel
+The ML Agent performs predictive analysis.
 
-↓
-
-Pandas
-
-↓
-
-Data Cleaning
-
-↓
-
-SQLite / PostgreSQL
-
-↓
-
-Dashboard
-
-↓
-
-Machine Learning
-```
-
-Used for:
-
-- Sales Data
-- Customer Data
-- Orders
-- Inventory
-- Product Information
-
----
-
-# 🧠 Machine Learning
-
-The platform trains Machine Learning models directly on uploaded datasets.
-
-### Regression
+Future capabilities:
 
 - Linear Regression
-- Sales Forecasting
-- Revenue Prediction
-
-### Classification
-
 - Logistic Regression
-- Customer Purchase Prediction
-- Churn Prediction
-
-### Neural Networks
-
-- Dense Layers
-- ReLU
-- Sigmoid
-- Softmax
-- Cross Entropy
-- Forward Propagation
-- Backpropagation
-- Adam Optimizer
-
----
-
-# 📚 Retrieval-Augmented Generation (RAG)
-
-Business documents are converted into embeddings.
-
-Pipeline:
-
-```text
-PDF
-
-↓
-
-Text Extraction
-
-↓
-
-Chunking
-
-↓
-
-Embeddings
-
-↓
-
-Vector Database
-
-↓
-
-Retriever
-
-↓
-
-LLM
-```
-
-The assistant can answer questions from uploaded documents without retraining the language model.
-
----
-
-# 🗄 SQL Analytics
-
-Structured datasets are stored inside SQLite/PostgreSQL.
-
-The SQL Agent converts natural language into SQL automatically.
+- Classification
+- Trend Prediction
 
 Example:
 
-```text
-Show last month's revenue.
-
-Top 10 customers.
-
-Revenue by region.
-
-Highest selling product.
-
-Average order value.
 ```
-
----
-
-# 🤖 LangChain Agent
-
-The LangChain Agent decides which tool should answer the user's question.
-
-```text
-                    User
-                      │
-                      ▼
-              LangChain Agent
-                      │
-      ┌───────────────┼────────────────┐
-      │               │                │
-      ▼               ▼                ▼
- SQL Toolkit        RAG         ML Prediction
-      │               │                │
-      └───────────────┼────────────────┘
-                      ▼
-              Final AI Response
-```
-
----
-
-# 💬 Conversation Memory
-
-The assistant remembers previous conversations.
-
-Example:
-
-```text
-User:
 Predict next month's sales.
 ```
 
-Later:
+---
 
-```text
-User:
-Compare that prediction with last year's sales.
+# 💬 Chat Supervisor
+
+The Chat Supervisor receives every user question.
+
+Instead of answering directly, it decides which AI agent should handle the request.
+
+Example:
+
+Question:
+
+```
+Show all employees.
 ```
 
-The assistant remembers the previous prediction automatically.
+↓
+
+SQL Agent
 
 ---
 
-# 📄 AI Report Generation
+Question:
 
-Generate professional reports automatically.
-
-- Sales Report
-- Revenue Report
-- Executive Summary
-- Business Insights
-- Forecast Report
-
----
-
-# 📈 Dashboard
-
-The dashboard includes:
-
-- Revenue Trends
-- Sales Growth
-- Profit Charts
-- Customer Analytics
-- Forecast Graphs
-- Regional Performance
-- Product Analysis
-
----
-
-# ⚙️ Project Architecture
-
-```text
-                          User
-                            │
-                            ▼
-                     React Dashboard
-                            │
-                            ▼
-                      FastAPI Backend
-                            │
-                            ▼
-                     LangChain Agent
-                            │
-        ┌───────────────────┼────────────────────┐
-        │                   │                    │
-        ▼                   ▼                    ▼
-   SQL Toolkit         RAG Engine          ML Models
-        │                   │                    │
- SQLite/Postgres      ChromaDB           TensorFlow
-        │                   │                    │
-        └───────────────────┼────────────────────┘
-                            ▼
-                     AI Generated Response
-                            │
-                            ▼
-                Dashboard + Reports + Charts
+```
+Explain the leave policy.
 ```
 
+↓
+
+RAG Agent
+
 ---
 
-# 🔄 Complete Workflow
+Question:
 
-```text
-Upload Files
+```
+Predict employee attrition.
+```
 
+↓
+
+ML Agent
+
+The Chat Supervisor acts as the central router for all AI interactions.
+
+---
+
+# 🔄 Complete Upload Flow
+
+```
+User Uploads PDF
         │
-
         ▼
-
- ┌──────────────┬───────────────┐
- │              │               │
- ▼              ▼               ▼
-
-PDF          CSV/Excel       Images (Future)
-
- │              │
-
- ▼              ▼
-
-Embeddings   SQL Database
-
- │              │
-
- ▼              ▼
-
-Vector DB   Machine Learning
-
- └──────────────┬──────────────┘
-
-                ▼
-
-        LangChain AI Agent
-
-                ▼
-
-      AI Analysis & Dashboard
-
-                ▼
-
-      Reports • Charts • Insights
+main.py
+        │
+        ▼
+Upload Supervisor
+        │
+        ▼
+PDF Parser
+        │
+        ▼
+Document Classifier
+        │
+        ▼
+Classification Result
+        │
+ ┌──────┴─────────┐
+ ▼                ▼
+SQL Loader    RAG Loader
+        │
+        ▼
+Databases Ready
 ```
+
+---
+
+# 💬 Complete Chat Flow
+
+```
+User Question
+      │
+      ▼
+main.py
+      │
+      ▼
+Chat Supervisor
+      │
+      ▼
+Intent Classifier
+      │
+      ▼
+SQL Agent / RAG Agent / ML Agent
+      │
+      ▼
+Answer
+```
+
+---
+
+# 🎯 Why Separate Everything?
+
+Each module has a **single responsibility**.
+
+This makes the system:
+
+- Easier to maintain
+- Easier to debug
+- Easier to extend
+- Closer to production architecture
+
+For example:
+
+The SQL Agent never needs to know how PDFs are parsed.
+
+The PDF Parser never needs to know SQL.
+
+The RAG Agent never needs to know how MySQL works.
+
+Each module focuses on one job and communicates through supervisors.
+
+---
+
+# 🚀 Future Improvements
+
+- Multi-document RAG
+- OCR support for scanned PDFs
+- Excel & CSV ingestion
+- Image document understanding
+- Dashboard generation
+- Automatic report creation
+- Vector search optimisation
+- Multi-agent collaboration using LangGraph
+- Support for multiple LLMs
+- User authentication
+- Report history and versioning
 
 ---
 
 # 🛠 Tech Stack
 
-### Frontend
-
-- React
-- Tailwind CSS
-- Chart.js / Plotly
-
-### Backend
-
-- FastAPI
 - Python
-
-### Machine Learning
-
-- TensorFlow
-- Scikit-learn
-- NumPy
-- Pandas
-
-### LLM
-
 - LangChain
 - LangGraph
-- OpenAI / Ollama
-
-### RAG
-
+- Ollama
+- Qwen
 - ChromaDB
-- Sentence Transformers
-- Recursive Text Splitter
-- PDF Loader
-
-### Database
-
-- SQLite
-- PostgreSQL
+- MySQL
+- PyPDF
+- Pandas
+- Scikit-learn
+- FastAPI (Future)
+- Streamlit / React (Future)
 
 ---
 
-# 📦 Future Improvements
+# 🌟 Vision
 
-- Multi-Agent System
-- Voice Assistant
-- Power BI Integration
-- Real-Time Streaming Analytics
-- Automated ETL Pipelines
-- Email Report Generation
-- Role-Based Authentication
-- Model Monitoring
-- Anomaly Detection
-- KPI Alerts
+The long-term goal is to build an **AI Business Intelligence Copilot** capable of:
 
----
-
-# 🎯 Learning Objectives
-
-This project demonstrates:
-
-- Machine Learning
-- Deep Learning
-- Neural Networks
-- Forward & Backpropagation
-- Optimizers
-- SQL Agents
-- Retrieval-Augmented Generation
-- Vector Databases
-- LangChain
-- LangGraph
-- AI Memory
-- Business Intelligence
-- Dashboard Development
-- End-to-End AI System Design
-
----
-
-## ⭐ Why This Project?
-
-Instead of building separate demos for Machine Learning, SQL, RAG, and LLMs, this project combines them into a single production-style AI application.
-
-The assistant can:
-
-- 📊 Analyze structured business data
-- 📄 Read and understand business reports
-- 📈 Predict future sales
-- 🤖 Answer questions using natural language
-- 📋 Generate executive summaries
-- 💡 Provide AI-powered business insights
-
-This mirrors how modern enterprise AI systems are designed.
+- Understanding enterprise documents
+- Performing semantic search
+- Querying structured databases
+- Training machine learning models
+- Generating business insights
+- Producing executive reports
+- Assisting decision-making through multiple specialised AI agents
